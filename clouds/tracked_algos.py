@@ -93,7 +93,7 @@ class TrackedLessThanRowColSeparation(LessThanRowColSeparation):
     def tracked_row_col_separation(self) -> Iterable[TrackedTiling]:
         """Yield the separated tilings with tracked clouds."""
         for separated_tiling in self.row_col_separation():
-            (indices_clouds, value_clouds) = TrackedTiling.map_clouds(
+            indices_clouds, value_clouds = TrackedTiling.map_clouds(
                 indices_clouds=self.tracked_tiling.indices_clouds,
                 value_clouds=self.tracked_tiling.value_clouds,
                 tiling_map=self.row_col_map,
@@ -122,7 +122,7 @@ class TrackedLessThanOrEqualRowColSeparation(
     ) -> Iterable[TrackedTiling]:
         """Yield the separated tilings with tracked clouds."""
         for separated_tiling in self.row_col_separation():
-            (indices_clouds, value_clouds) = TrackedTiling.map_clouds(
+            indices_clouds, value_clouds = TrackedTiling.map_clouds(
                 indices_clouds=self.tracked_tiling.indices_clouds,
                 value_clouds=self.tracked_tiling.value_clouds,
                 tiling_map=self.row_col_map,
@@ -182,4 +182,4 @@ class TrackedPointPlacement(PointPlacement):
         cells = set()
         for idx, gcp in zip(indices, requirement_list):
             cells.add(gcp.positions[idx])
-        return cells
+        return sorted(cells)
