@@ -580,11 +580,10 @@ class LessThanOrEqualRowColSeparation(AbstractSeparation):
             return
         new_obstructions, new_requirements = row_col_map.preimage_of_tiling(self.tiling)
         new_dimensions = self.new_dimensions
-        new_obstructions += self.new_obstructions
+        new_obstructions += self.new_obstructions + self.point_obs()
         for obs, reqs in self.point_row_obs_and_reqs():
-            yield Tiling(
-                new_obstructions + obs, new_requirements + reqs, new_dimensions
-            )
+            yield Tiling(new_obstructions, new_requirements + reqs, new_dimensions)
+            yield Tiling(new_obstructions + obs, new_requirements, new_dimensions)
 
     def point_row_obs_and_reqs(
         self,
@@ -592,9 +591,6 @@ class LessThanOrEqualRowColSeparation(AbstractSeparation):
         """
         Return the obstructions and requirements for the points in the rows.
         """
-        point_obs = self.point_obs()
-        row_reqs: dict[int, Requirements] = {}
-        row_obs: dict[int, Obstructions] = {}
         for row in self.point_rows:
             indices_of_above = []
             indices_of_below = []
@@ -612,18 +608,10 @@ class LessThanOrEqualRowColSeparation(AbstractSeparation):
                 row_point_gcps_below.append(
                     GriddedCayleyPerm(CayleyPermutation([0]), ((i, row),))
                 )
-            row_reqs[row] = (tuple(row_point_gcps_above), tuple(row_point_gcps_below))
-            row_obs[row] = tuple(row_point_gcps_above + row_point_gcps_below)
-        for i in range(len(self.point_rows) + 1):
-            for positive_rows in combinations(self.point_rows, i):
-                obs: list[GriddedCayleyPerm] = []
-                reqs: list[tuple[GriddedCayleyPerm, ...]] = []
-                for row in self.point_rows:
-                    if row in positive_rows:
-                        reqs.extend(row_reqs[row])
-                    else:
-                        obs.extend(row_obs[row])
-                yield point_obs + tuple(obs), tuple(reqs)
+            yield tuple(row_point_gcps_above + row_point_gcps_below), (
+                tuple(row_point_gcps_above),
+                tuple(row_point_gcps_below),
+            )
 
     def point_obs(self) -> Obstructions:
         """Return the point obstructions."""
