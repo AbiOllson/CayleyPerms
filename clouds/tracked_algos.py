@@ -177,7 +177,7 @@ class TrackedPointPlacement(PointPlacement):
         self,
         requirement_list: tuple[GriddedCayleyPerm, ...],
         indices: tuple[int, ...],
-    ) -> set[Cell]:
+    ) -> list[Cell]:
         """Return the set of cells to place points in."""
         cells = set()
         for idx, gcp in zip(indices, requirement_list):

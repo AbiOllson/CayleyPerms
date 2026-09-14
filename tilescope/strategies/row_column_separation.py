@@ -582,8 +582,8 @@ class LessThanOrEqualRowColSeparation(AbstractSeparation):
         new_dimensions = self.new_dimensions
         new_obstructions += self.new_obstructions + self.point_obs()
         for obs, reqs in self.point_row_obs_and_reqs():
-            yield Tiling(new_obstructions, new_requirements + reqs, new_dimensions)
             yield Tiling(new_obstructions + obs, new_requirements, new_dimensions)
+            yield Tiling(new_obstructions, new_requirements + reqs, new_dimensions)
 
     def point_row_obs_and_reqs(
         self,
