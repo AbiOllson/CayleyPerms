@@ -62,6 +62,14 @@ class Tiling(CombinatorialClass):
         self.obstructions = algorithm.obstructions
         self.requirements = algorithm.requirements
 
+    def simplify(self) -> "Tiling":
+        """Simplifies the tiling and returns a new tiling."""
+        algorithm = SimplifyObstructionsAndRequirements(
+            self.obstructions, self.requirements, self.dimensions
+        )
+        algorithm.simplify()
+        return Tiling(algorithm.obstructions, algorithm.requirements, self.dimensions)
+
     def _gridded_cayley_permutations(self, size: int) -> Iterator[GriddedCayleyPerm]:
         """
         Generating gridded Cayley permutations of size 'size'.
