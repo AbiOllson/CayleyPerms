@@ -82,7 +82,7 @@ class AbstractRequirementPlacementStrategy(
         children: Optional[Tuple[TilingT, ...]] = None,
     ) -> Iterator[GriddedCayleyPerm]:
         placed_cells = sorted(
-            set([gcp.positions[i] for gcp, i in zip(self.gcps, self.indices)])
+            set(gcp.positions[i] for gcp, i in zip(self.gcps, self.indices))
         )
         placed_cells = [(x + 1, y + 1) for x, y in placed_cells]
         for placed_cell, obj in zip(placed_cells, objs[1:]):
@@ -106,7 +106,7 @@ class AbstractRequirementPlacementStrategy(
         obj: GriddedCayleyPerm,
         children: Optional[Tuple[TilingT, ...]] = None,
     ) -> Tuple[Optional[GriddedCayleyPerm], ...]:
-        cells = [gp.positions[idx] for gp, idx in zip(self.gcps, self.indices)]
+        cells = sorted(set(gcp.positions[i] for gcp, i in zip(self.gcps, self.indices)))
         if obj.avoids(self.gcps):
             return (obj,) + tuple(None for _ in cells)
         # find the forced point, idx, val in obj
