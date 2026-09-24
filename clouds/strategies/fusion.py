@@ -16,6 +16,261 @@ from .fusion_constructor import (
 
 Cell = tuple[int, int]
 
+"""
+DivideByN is from
+https://github.com/PermutaTriangle/Tilings/blob/develop/tilings/strategies/unfusion.py
+
+DivideByK is from
+https://github.com/PermutaTriangle/Tilings/blob/develop/tilings/strategies/pointing.py
+
+FusionRule is from
+https://github.com/PermutaTriangle/Tilings/blob/develop/tilings/strategies/fusion/fusion.py
+"""
+
+from collections import defaultdict, Counter
+from itertools import islice
+from random import randint
+from typing import Callable, Iterator, List, Optional, Tuple, cast, Dict
+import sympy
+
+from comb_spec_searcher.typing import (
+    CombinatorialClassType,
+    CombinatorialObjectType,
+    Parameters,
+    SubObjects,
+    SubRecs,
+    SubSamplers,
+    SubTerms,
+    Terms,
+)
+from comb_spec_searcher.strategies import NonBijectiveRule, DisjointUnion, Constructor
+from comb_spec_searcher.typing import Objects
+from comb_spec_searcher.exception import StrategyDoesNotApply
+from gridded_cayley_permutations import GriddedCayleyPerm
+from .fusion_constructor import FusionConstructor
+
+
+class DivideByN(DisjointUnion[CombinatorialClassType, CombinatorialObjectType]):
+    """
+    A constructor that works as disjoint union
+    but divides the values by n + shift.
+    """
+
+    def __init__(
+        self,
+        parent: CombinatorialClassType,
+        children: Tuple[CombinatorialClassType, ...],
+        shift: int,
+        extra_parameters: Optional[Tuple[Dict[str, str], ...]] = None,
+    ):
+        self.shift = shift
+        self.initial_conditions = {
+            n: parent.get_terms(n) for n in range(1 - self.shift)
+        }
+        super().__init__(parent, children, extra_parameters)
+
+    def get_equation(
+        self, lhs_func: sympy.Function, rhs_funcs: Tuple[sympy.Function, ...]
+    ) -> sympy.Eq:
+        # TODO: d/dx [ x**shift * lhsfun ] / x**(shift - 1) = A + B + ...
+        raise NotImplementedError
+
+    def get_terms(
+        self, parent_terms: Callable[[int], Terms], subterms: SubTerms, n: int
+    ) -> Terms:
+        if n + self.shift <= 0:
+            return self.initial_conditions[n]
+        terms = super().get_terms(parent_terms, subterms, n)
+        return Counter({key: value // (n + self.shift) for key, value in terms.items()})
+
+    def get_sub_objects(
+        self, subobjs: SubObjects, n: int
+    ) -> Iterator[
+        Tuple[Parameters, Tuple[List[Optional[CombinatorialObjectType]], ...]]
+    ]:
+        raise NotImplementedError
+
+    def random_sample_sub_objects(
+        self,
+        parent_count: int,
+        subsamplers: SubSamplers,
+        subrecs: SubRecs,
+        n: int,
+        **parameters: int,
+    ) -> Tuple[Optional[CombinatorialObjectType], ...]:
+        raise NotImplementedError
+
+    @staticmethod
+    def get_eq_symbol() -> str:
+        return "?"
+
+    def __str__(self):
+        return "divide by n"
+
+    def equiv(
+        self, other: Constructor, data: Optional[object] = None
+    ) -> Tuple[bool, Optional[object]]:
+        raise NotImplementedError
+
+
+class DivideByK(DivideByN):
+    """
+    A constructor that works as disjoint union
+    but divides the values by k + shift.
+    """
+
+    def __init__(
+        self,
+        parent: CombinatorialClassType,
+        children: Tuple[CombinatorialClassType, ...],
+        shift: int,
+        parameter: str,
+        extra_parameters: Optional[Tuple[Dict[str, str], ...]] = None,
+    ):
+        self.parameter = parameter
+        self.division_index = parent.extra_parameters.index(parameter)
+        super().__init__(parent, children, shift, extra_parameters)
+
+    def get_terms(
+        self, parent_terms: Callable[[int], Terms], subterms: SubTerms, n: int
+    ) -> Terms:
+        if n + self.shift <= 0:
+            return self.initial_conditions[n]
+        terms = DisjointUnion.get_terms(self, parent_terms, subterms, n)
+        return Counter(
+            {
+                key: (
+                    value // (key[self.division_index] + self.shift)
+                    if (key[self.division_index] + self.shift) != 0
+                    else value
+                )
+                for key, value in terms.items()
+            }
+        )
+
+    def __str__(self):
+        return f"divide by {self.parameter}"
+
+
+class FusionRule(NonBijectiveRule[TrackedTiling, GriddedCayleyPerm]):
+    """Overwritten the generate objects of size method, as this relies on
+    knowing the number of left and right points of the parent TrackedTiling."""
+
+    @property
+    def strategy(self) -> "TrackedFusionStrategy":
+        return cast(
+            TrackedFusionStrategy,
+            super().strategy,
+        )
+
+    @property
+    def constructor(self) -> FusionConstructor:
+        return cast(FusionConstructor, super().constructor)
+
+    def is_equivalence(
+        self, is_empty: Optional[Callable[[TrackedTiling], bool]] = None
+    ) -> bool:
+        return False
+
+    def _ensure_level_objects(self, n: int) -> None:
+        if self.subobjects is None:
+            raise RuntimeError("set_subrecs must be set first")
+        while n >= len(self.objects_cache):
+            res: Objects = defaultdict(list)
+            min_left, min_right = self.constructor.min_points
+
+            def add_new_gp(
+                params: List[int],
+                left_points: int,
+                fuse_region_points: int,
+                unfused_gps: Iterator[GriddedCayleyPerm],
+            ) -> None:
+                """Update new terms if there is enough points on the left and right."""
+                gp = next(unfused_gps)
+                if (
+                    min_left <= left_points
+                    and min_right <= fuse_region_points - left_points
+                ):
+                    res[tuple(params)].append(gp)
+
+            for param, objects in self.subobjects[0](len(self.objects_cache)).items():
+                fuse_region_points = param[self.constructor.fuse_parameter_index]
+                for gp in objects:
+                    new_params = list(self.constructor.children_param_map(param))
+                    unfused_gps = self.strategy.backward_map(
+                        self.comb_class, (gp,), self.children
+                    )  # iterates over unfused gridded perms in order
+                    # with 0, 1, .., and finally fuse_region_points on the left
+                    for idx in self.constructor.left_parameter_indices:
+                        new_params[idx] -= fuse_region_points
+                    add_new_gp(new_params, 0, fuse_region_points, unfused_gps)
+                    for left_points in range(1, fuse_region_points + 1):
+                        for idx in self.constructor.left_parameter_indices:
+                            new_params[idx] += 1
+                        for idx in self.constructor.right_parameter_indices:
+                            new_params[idx] -= 1
+                        add_new_gp(
+                            new_params, left_points, fuse_region_points, unfused_gps
+                        )
+
+            self.objects_cache.append(res)
+
+    def random_sample_object_of_size(
+        self, n: int, **parameters: int
+    ) -> GriddedCayleyPerm:
+        """Return a random objects of the give size."""
+        assert (
+            self.subrecs is not None and self.subsamplers is not None
+        ), "you must call the set_subrecs function first"
+        subrec = self.subrecs[0]
+        subsampler = self.subsamplers[0]
+        parent_count = self.count_objects_of_size(n, **parameters)
+        random_choice = randint(1, parent_count)
+        total = 0
+        left_right_points = self.constructor.determine_number_of_points_in_fuse_region(
+            n, **parameters
+        )
+        for left_points, right_points in left_right_points:
+            new_params = self.constructor.update_subparams(
+                left_points, right_points, **parameters
+            )
+            if new_params is not None:
+                assert (
+                    new_params[self.constructor.fuse_parameter]
+                    == left_points + right_points
+                )
+                total += subrec(n, **new_params)
+                if random_choice <= total:
+                    gp = subsampler(n, **new_params)
+                    try:
+                        return next(
+                            self.strategy.backward_map(
+                                self.comb_class, (gp,), self.children, left_points
+                            )
+                        )
+                    except StopIteration:
+                        assert 0, "something went wrong"
+        raise RuntimeError("The for-loop for randomly sampling objects was empty")
+
+    def _forward_order(
+        self,
+        obj: GriddedCayleyPerm,
+        image: Tuple[Optional[GriddedCayleyPerm], ...],
+        data: Optional[object] = None,
+    ) -> int:
+        # The position of the original object in the backward map of the child object
+        return next(i for i, gp in enumerate(self.backward_map(image)) if gp == obj)
+
+    def _backward_order_item(
+        self,
+        idx: int,
+        objs: Tuple[Optional[GriddedCayleyPerm], ...],
+        data: Optional[object] = None,
+    ) -> GriddedCayleyPerm:
+        if data:  # reverse order
+            return tuple(self.backward_map(objs))[-idx - 1]
+        return next(islice(self.backward_map(objs), idx, None))
+
 
 class AbstractTrackedFusionStrategy(
     ExtraParametersForStrategies, AbstractFusionStrategy[TrackedTiling]
@@ -58,6 +313,17 @@ class AbstractTrackedFusionStrategy(
                     comb_class.find_parameter(cloud, self.fuse_rows)
                 )
         return left_sided_parameters, right_sided_parameters, both_sided_parameters
+
+    def __call__(
+        self,
+        comb_class: TrackedTiling,
+        children: Optional[Tuple[TrackedTiling, ...]] = None,
+    ) -> FusionRule:
+        if children is None:
+            children = self.decomposition_function(comb_class)
+            if children is None:
+                raise StrategyDoesNotApply("Strategy does not apply")
+        return FusionRule(self, comb_class, children=children)
 
 
 class TrackedFusionStrategy(
