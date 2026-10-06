@@ -63,7 +63,7 @@ class TrackedLessThanOrEqualRowColSeparationStrategy(
     ) -> tuple[TrackedTiling, ...]:
         """Return the decomposition function."""
         algo = self.algorithm(comb_class)
-        return (next(algo.tracked_row_col_separation()),)
+        return tuple(algo.tracked_row_col_separation())
 
 
 class TrackedLessThanOrEqualRowColSeparationFactory(
