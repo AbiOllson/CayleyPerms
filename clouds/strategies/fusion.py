@@ -1,11 +1,10 @@
 """Tracked fusion strategies for tilings."""
 
-from typing import Optional
 from collections import defaultdict, Counter
 from itertools import islice
 from random import randint
 from typing import Callable, Iterator, List, Optional, Tuple, cast, Dict
-import sympy
+import sympy  # type: ignore[import-untyped]
 from comb_spec_searcher.typing import (
     CombinatorialClassType,
     CombinatorialObjectType,
@@ -16,7 +15,6 @@ from comb_spec_searcher.typing import (
     SubTerms,
     Terms,
 )
-from comb_spec_searcher.strategies.constructor import Constructor
 from comb_spec_searcher.strategies import NonBijectiveRule, DisjointUnion, Constructor
 from comb_spec_searcher.typing import Objects
 from comb_spec_searcher.exception import StrategyDoesNotApply
@@ -25,7 +23,6 @@ from tilescope.strategies import (
     AbstractFusionStrategy,
 )
 from gridded_cayley_permutations import GriddedCayleyPerm
-from .fusion_constructor import FusionConstructor
 from ..tracked_tiling import TrackedTiling
 from .extra_parameters import ExtraParametersForStrategies
 from .fusion_constructor import (
@@ -70,7 +67,7 @@ class DivideByN(DisjointUnion[CombinatorialClassType, CombinatorialObjectType]):
     def get_equation(
         self, lhs_func: sympy.Function, rhs_funcs: Tuple[sympy.Function, ...]
     ) -> sympy.Eq:
-        # TODO: d/dx [ x**shift * lhsfun ] / x**(shift - 1) = A + B + ...
+        # Not implemented yet: d/dx [ x**shift * lhsfun ] / x**(shift - 1) = A + B + ...
         raise NotImplementedError
 
     def get_terms(
@@ -125,6 +122,9 @@ class DivideByK(DivideByN):
         parameter: str,
         extra_parameters: Optional[Tuple[Dict[str, str], ...]] = None,
     ):
+        # pylint: disable=too-many-arguments
+        # pylint: disable=too-many-positional-arguments
+        self.parameter = parameter
         self.parameter = parameter
         self.division_index = parent.extra_parameters.index(parameter)
         super().__init__(parent, children, shift, extra_parameters)
