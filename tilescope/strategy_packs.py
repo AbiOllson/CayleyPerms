@@ -274,6 +274,21 @@ class TileScopePack(StrategyPack):
         ]
 
     @classmethod
+    def all_packs_atom_ver(cls):
+        """Reuturns a list of all strategy packs with only atom verification."""
+        return [
+            cls.point_placement(),
+            cls.row_and_col_placement(),
+            cls.make_pack(
+                expansions=["point", "row", "col"],
+                cell_insertion="expansion",
+                verify=False,
+            ),
+            cls.row_placement(),
+            cls.col_placement(),
+        ]
+
+    @classmethod
     def point_placement(cls):
         """Point placement strategy pack."""
         return cls.make_pack(expansions=["point"], cell_insertion="expansion")
