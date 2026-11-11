@@ -1,11 +1,31 @@
 """Tracked fusion strategies for tilings."""
 
 from typing import Optional
+from collections import defaultdict, Counter
+from itertools import islice
+from random import randint
+from typing import Callable, Iterator, List, Optional, Tuple, cast, Dict
+import sympy
+from comb_spec_searcher.typing import (
+    CombinatorialClassType,
+    CombinatorialObjectType,
+    Parameters,
+    SubObjects,
+    SubRecs,
+    SubSamplers,
+    SubTerms,
+    Terms,
+)
 from comb_spec_searcher.strategies.constructor import Constructor
+from comb_spec_searcher.strategies import NonBijectiveRule, DisjointUnion, Constructor
+from comb_spec_searcher.typing import Objects
+from comb_spec_searcher.exception import StrategyDoesNotApply
 from tilescope.strategies import (
     AbstractFusionFactory,
     AbstractFusionStrategy,
 )
+from gridded_cayley_permutations import GriddedCayleyPerm
+from .fusion_constructor import FusionConstructor
 from ..tracked_tiling import TrackedTiling
 from .extra_parameters import ExtraParametersForStrategies
 from .fusion_constructor import (
@@ -26,28 +46,6 @@ https://github.com/PermutaTriangle/Tilings/blob/develop/tilings/strategies/point
 FusionRule is from
 https://github.com/PermutaTriangle/Tilings/blob/develop/tilings/strategies/fusion/fusion.py
 """
-
-from collections import defaultdict, Counter
-from itertools import islice
-from random import randint
-from typing import Callable, Iterator, List, Optional, Tuple, cast, Dict
-import sympy
-
-from comb_spec_searcher.typing import (
-    CombinatorialClassType,
-    CombinatorialObjectType,
-    Parameters,
-    SubObjects,
-    SubRecs,
-    SubSamplers,
-    SubTerms,
-    Terms,
-)
-from comb_spec_searcher.strategies import NonBijectiveRule, DisjointUnion, Constructor
-from comb_spec_searcher.typing import Objects
-from comb_spec_searcher.exception import StrategyDoesNotApply
-from gridded_cayley_permutations import GriddedCayleyPerm
-from .fusion_constructor import FusionConstructor
 
 
 class DivideByN(DisjointUnion[CombinatorialClassType, CombinatorialObjectType]):
