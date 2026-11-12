@@ -959,7 +959,6 @@ class PointRowFusionConstructor(Constructor[Tiling, GriddedPerm]):
             for child, parent_vars in self.reversed_extra_parameters.items()
         }
 
-        # make fractions bottom/top and fuse/bottom
         top, bottom, fusion_params = sympy.Number(1), sympy.Number(1), sympy.Number(1)
         for parent_fuse_parameter in self.parent_fusion_parameters:
             fusion_params *= sympy.var(parent_fuse_parameter)
@@ -967,22 +966,26 @@ class PointRowFusionConstructor(Constructor[Tiling, GriddedPerm]):
             bottom *= sympy.var(param)
         for param in self.right_sided_parameters:
             top *= sympy.var(param)
+        # point: parameters on the point row's side; other: the other side
+        point, other = (top, bottom) if self.above else (bottom, top)
 
-        # subs to make fuse_parameter in rhs fusion_params / bottom
+        # A child with k values in the fused row comes from a parent where
+        # either the point row is empty (k values on the other side), or the
+        # point row has one value (k - 1 values on the other side). This
+        # matches get_terms. With C1 = child at fuse_parameter = fusion_params/point
+        # and C0 = child at fuse_parameter = 0:
+        #     parent = C1 + (point / other) * (C1 - C0)
         subs1 = {**subs}
-        subs1[self.fuse_parameter] = fusion_params / bottom
-        rhs_func.subs(subs1, simultaneous=True)
+        subs1[self.fuse_parameter] = fusion_params / point
+        point_row_empty = rhs_func.subs(subs1, simultaneous=True)
 
-        # subs to make fuse_parameter 0 in rhs eqn
         subs2 = {**subs}
         subs2[self.fuse_parameter] = 0
+        fused_row_empty = rhs_func.subs(subs2, simultaneous=True)
 
         return sympy.Eq(
             lhs_func,
-            (
-                rhs_func
-                - bottom / top * (rhs_func - rhs_func.subs(subs2, simultaneous=True))
-            ),
+            point_row_empty + point / other * (point_row_empty - fused_row_empty),
         )
 
     def get_sub_objects(self, subobjs, n):
