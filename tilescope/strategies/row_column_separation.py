@@ -32,7 +32,6 @@ class Graph(Generic[Vertex]):
         - The weight of the edges is the sum of the weight of the edges that
         went to any of the merged vertices before the merge.
 
-
     The graph supports 2 operations
         - `reduce`: who merge two vertices that were not connected by an edges
         and repeat as long as possible.
@@ -101,7 +100,6 @@ class Graph(Generic[Vertex]):
     def is_acyclic(self) -> bool:
         """
         Check if the graph is acyclic.
-
         To perform that check, the graph must first be reduced with the
         `reduce` method.
         """
@@ -114,14 +112,10 @@ class Graph(Generic[Vertex]):
         """
         Return the edges of a cycle of the graphs. The graphs first need to be
         reduced
-
         If a cycle of length 3 is return it means that no cycle of length 2
         exist.
-
         If the graph is acyclic, returns None.
-
         NOTE:
-
             One can prove that if a reduced graph is not acyclic it has either
             a cycle of length 2 or 3.
         """
@@ -192,7 +186,6 @@ class Graph(Generic[Vertex]):
         """
         Remove all the edges that touch vertex that that have a weight which is
         too small.
-
         The weight of an edge is too small if it is smaller than the product
         of the weights of the two vertex it connects.
         """
