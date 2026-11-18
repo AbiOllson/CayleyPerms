@@ -32,7 +32,6 @@ class Graph(Generic[Vertex]):
         - The weight of the edges is the sum of the weight of the edges that
         went to any of the merged vertices before the merge.
 
-
     The graph supports 2 operations
         - `reduce`: who merge two vertices that were not connected by an edges
         and repeat as long as possible.
@@ -101,7 +100,6 @@ class Graph(Generic[Vertex]):
     def is_acyclic(self) -> bool:
         """
         Check if the graph is acyclic.
-
         To perform that check, the graph must first be reduced with the
         `reduce` method.
         """
@@ -114,14 +112,10 @@ class Graph(Generic[Vertex]):
         """
         Return the edges of a cycle of the graphs. The graphs first need to be
         reduced
-
         If a cycle of length 3 is return it means that no cycle of length 2
         exist.
-
         If the graph is acyclic, returns None.
-
         NOTE:
-
             One can prove that if a reduced graph is not acyclic it has either
             a cycle of length 2 or 3.
         """
@@ -192,7 +186,6 @@ class Graph(Generic[Vertex]):
         """
         Remove all the edges that touch vertex that that have a weight which is
         too small.
-
         The weight of an edge is too small if it is smaller than the product
         of the weights of the two vertex it connects.
         """
@@ -831,10 +824,11 @@ class AbstractLessThanOrEqualRowColSeparationStrategy(
 
     def __init__(
         self,
-        row_order: list[set[Cell]],
+        row_order: Optional[list[set[Cell]]] = None,
         ignore_parent: bool = True,
         possibly_empty: bool = True,
     ):
+        """If row_order is None, the maximal row order of each tiling is used."""
         super().__init__(ignore_parent=ignore_parent, possibly_empty=possibly_empty)
         self.row_order = row_order
 
@@ -852,13 +846,19 @@ class AbstractLessThanOrEqualRowColSeparationStrategy(
 
     def to_jsonable(self) -> dict:
         d: dict = super().to_jsonable()
-        d["row_order"] = [list(row) for row in self.row_order]
+        if self.row_order is not None:
+            d["row_order"] = [list(row) for row in self.row_order]
         return d
 
     @classmethod
     def from_dict(cls, d: dict) -> "AbstractLessThanRowColSeparationStrategy":
+        # Specs saved before row_order was stored have no "row_order" key;
+        # they always used the maximal row order, which None gives.
+        row_order = d.get("row_order")
+        if row_order is not None:
+            row_order = [set(tuple(cell) for cell in row) for row in row_order]
         return cls(
-            row_order=[set(tuple(cell) for cell in row) for row in d["row_order"]],
+            row_order=row_order,
             ignore_parent=d["ignore_parent"],
             possibly_empty=d["possibly_empty"],
         )
