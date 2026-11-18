@@ -73,7 +73,8 @@ class AbstractFusionStrategy(Strategy[TilingT, GriddedCayleyPerm]):
                     else:
                         if (
                             self.fuse_rows
-                            and len(preimage.indices_in_row(self.index)) == left_points
+                            and len(set(preimage.values_in_row(self.index)))
+                            == left_points
                         ):
                             yield preimage
                         elif (

@@ -1,5 +1,6 @@
 """This module contains the CayleyPermutation class and functions for working with them."""
 
+from __future__ import annotations
 from collections import deque
 from functools import cached_property
 from itertools import combinations
